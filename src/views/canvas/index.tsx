@@ -2,10 +2,8 @@ import React, { memo, useEffect, useRef, useState } from 'react'
 import type { FC, ReactNode } from 'react'
 import { CanvasStyled } from './style'
 
-import { AntDesignOutlined, UserOutlined } from '@ant-design/icons';
 import { Avatar, Divider, Tooltip, ColorPicker, Slider, Button  } from 'antd';
 import type { Color } from 'antd/es/color-picker';
-import type { SliderMarks } from 'antd/es/slider';
 
 import { SOCKET_CANVAS_URL } from '@/service/config';
 import { io } from 'socket.io-client';
@@ -217,6 +215,11 @@ const Home: FC<IPerson> = memo(() => {
       console.log('画板用户在线', data.userList);
       setOnlinePerson(data.userList)
     })
+
+
+    return ()=>{
+      socketIo.disconnect()
+    }
   },[userInfo.userId])
 
   const changeColor = (value: Color) =>{

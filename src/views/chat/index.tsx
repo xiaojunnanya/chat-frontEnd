@@ -33,14 +33,14 @@ const Chat: FC<IPerson> = memo(() => {
   const [friendInfo, setFriendInfo ] = useState<Item[]>([])
   // 当前聊天的index，展示高亮
   const [ activeIndex, setActiveIndex ] = useState<number>(-1)
-  
-
   // 纪录当前在线人的信息
   const [ onlinePerson, setOnlinePerson ] = useState<any[]>([])
   // 文本域的信息
   const [ chat, setChat ] = useState<any>('')
   // 保存当前聊天人的socketid
   const [ socketId, setSocketId ] = useState<string>('')
+  // 保存当前聊天人的个人信息
+  const [ newChatPerson, setNewChatPerson ] = useState<userInfoType>()
   // 保存聊天记录的盒子
   const [ keepMsgCon, setKeepMsgCon ] = useState<any>([])
   // 纪录是否在线
@@ -58,10 +58,6 @@ const Chat: FC<IPerson> = memo(() => {
     getFriend().then(res =>{
       setFriendInfo(res.data.data);
     })
-  },[])
-
-  useEffect(()=>{
-    // let res = await getFriend()
 
     const socketIo = io(SOCKET_CHAT_URL, {
       query: {
@@ -71,46 +67,47 @@ const Chat: FC<IPerson> = memo(() => {
     });
 
     setSocket(socketIo)
+  },[])
+
+  useEffect(()=>{
+    // let res = await getFriend()
+    if(!socket) return
+    console.log("现在的聊天人", newChatPerson);
     // 广播哪些用户在线
-    socketIo.on('online', (data: any) =>{
+    socket.on('online', (data: any) =>{
       console.log('聊天用户在线', data.userList);
       // 在我接受到用户上线的时候，直接更新数据，更新是否在线
       setOnlinePerson(data.userList)
       
-      // 这边有问题，多好友的时候，无法同步上线，还是需要用过点击来实现
-      // 在切换应用的时候应该都在线的，不设置这个是对的，在用户刚上线和下线的时候直接渲染
-      // 但是画布那边是不在线的，接受不到
-      // 应该是要分消息在线和画布在线两种情况的
-         
-      // for (const it of friendInfo) {
-      //   for (const item of data.userList) {
-      //     // console.log(item);
-      //     if(it.userId == item.userId){
-      //       console.log('111');
-            
-      //       setIsOnline(true)
-      //       return;
-      //     }else{
-      //       console.log('222');
-            
-      //       setIsOnline(false)
-      //     }
-      //   }
-      // }
+      // 虽然实现了同步上线，但有时候还是有问题，有时候执行不到这里
+      // 应该是没有发online，但是如果我们将socketIo放到这来，socketid就会变
+      if(!newChatPerson) return
+      for (const item of data.userList) {
+        if(item.userId === newChatPerson.userId){
+          console.log('true');
+          
+          setIsOnline(true)
+          break;
+        }else{
+          setIsOnline(false)
+        }
+      }
 
     })
 
-    socketIo.on('msg', (msg:any)=>{
-      console.log(msg);
-      
+    socket.on('msg', (msg:any)=>{
       setKeepMsgCon((prevKeepMsgCon: any) => [...prevKeepMsgCon, msg]);
     })
 
-    return ()=>{
-      socketIo.disconnect()
-    }
+    socket.on('error', (error: any) => {
+      console.error('socket 错误:', error);
+    });
+
+    // return ()=>{
+    //   socket.disconnect()
+    // }
     // 这个socketId不能加，我们要保持socketid在对一个用户交流的时候相同
-  },[userInfo.userId, friendInfo])
+  },[userInfo.userId, friendInfo, newChatPerson])
   
   
 
@@ -134,6 +131,8 @@ const Chat: FC<IPerson> = memo(() => {
   // 点击好友进行聊天
   const chatToFriend = (item: Item, index: number) =>{
     setActiveIndex(index)
+    
+    setNewChatPerson(item)
     // 将通过路径进入页面（后面实现）
     // navigate(`/home?sendName=${userInfo.username}&acceptName=${item.username}`)
 
@@ -144,8 +143,6 @@ const Chat: FC<IPerson> = memo(() => {
 
     // 查找在线列表有没有交流好友的id，看看在不在线
     const isOnline = onlinePerson.find(it => it.userId === item.userId)
-    console.log(isOnline);
-    
     if(isOnline){
       
       // 在线进行socket
@@ -176,8 +173,7 @@ const Chat: FC<IPerson> = memo(() => {
       time: new Date().getTime()
     }
 
-    const toMsg = [...keepMsgCon, sendMsg]
-    setKeepMsgCon(toMsg)
+    setKeepMsgCon((keepMsgCon: any)=> [...keepMsgCon, sendMsg])
     if(socketId){
       // 在线走socket
       socket.emit('sendMsg',sendMsg)
