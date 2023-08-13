@@ -58,7 +58,9 @@ const Chat: FC<IPerson> = memo(() => {
     getFriend().then(res =>{
       setFriendInfo(res.data.data);
     })
+  },[])
 
+  useEffect(()=>{
     const socketIo = io(SOCKET_CHAT_URL, {
       query: {
         userId: userInfo.userId,
@@ -67,33 +69,31 @@ const Chat: FC<IPerson> = memo(() => {
     });
 
     setSocket(socketIo)
-  },[])
+  },[userInfo])
 
   useEffect(()=>{
     // let res = await getFriend()
     if(!socket) return
-    console.log("现在的聊天人", newChatPerson);
     // 广播哪些用户在线
     socket.on('online', (data: any) =>{
-      console.log('聊天用户在线', data.userList);
-      // 在我接受到用户上线的时候，直接更新数据，更新是否在线
+      
       setOnlinePerson(data.userList)
       
-      // 虽然实现了同步上线，但有时候还是有问题，有时候执行不到这里
-      // 应该是没有发online，但是如果我们将socketIo放到这来，socketid就会变
+      // 在我接受到用户上线的时候，直接更新数据，更新是否在线
       if(!newChatPerson) return
       for (const item of data.userList) {
         if(item.userId === newChatPerson.userId){
-          console.log('true');
-          
           setIsOnline(true)
-          break;
+          // break;
         }else{
           setIsOnline(false)
         }
       }
 
     })
+
+    // 移除之前绑定的事件监听
+    socket.off('msg');
 
     socket.on('msg', (msg:any)=>{
       setKeepMsgCon((prevKeepMsgCon: any) => [...prevKeepMsgCon, msg]);
@@ -107,7 +107,7 @@ const Chat: FC<IPerson> = memo(() => {
     //   socket.disconnect()
     // }
     // 这个socketId不能加，我们要保持socketid在对一个用户交流的时候相同
-  },[userInfo.userId, friendInfo, newChatPerson])
+  },[socket, newChatPerson])
   
   
 

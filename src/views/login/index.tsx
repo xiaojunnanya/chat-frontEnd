@@ -19,7 +19,7 @@ const Login: FC<IPerson> = memo(() => {
     const onFinish = async (values: any) => {
         let res = await login(values)
         message.destroy()
-        if(res.status === 500){
+        if( res.status === 500 ||  res.data.code === 500){
             message.error('登录失败，请稍后重试');
         }else{
             if(res.data.data){

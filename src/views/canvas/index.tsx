@@ -212,7 +212,6 @@ const Home: FC<IPerson> = memo(() => {
     });
     setSocket(socketIo)
     socketIo.on('online', (data: any) =>{
-      console.log('画板用户在线', data.userList);
       setOnlinePerson(data.userList)
     })
 
@@ -223,7 +222,6 @@ const Home: FC<IPerson> = memo(() => {
   },[userInfo.userId])
 
   const changeColor = (value: Color) =>{
-    console.log(value.toHexString());
     setCanvasColor(value.toHexString())
   }
   
